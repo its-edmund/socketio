@@ -28,6 +28,6 @@ io.sockets.on('connection', function(socket) {
 
 app.use(express.static('public/'));
 
-http.listen(8080, function() {
-  console.log('listening on *:8080');
+http.listen(3000, function() {
+  console.log('listening on 3000');
 });
