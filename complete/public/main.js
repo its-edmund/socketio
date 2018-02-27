@@ -95,7 +95,42 @@
         return availableStokeStyles[nextIndex];
     };
 
+    var updateUsersList = function (usersUl) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', "/users", true);  // true for async
+        xhr.responseType = 'json';
+        xhr.onload = function() {
+            if (xhr.status !== 200) {
+                console.error("Error", xhr.response);
+                return;
+            }
+
+            var users = xhr.response;
+
+            // Remove all children
+            while (usersUl.firstChild) {
+                usersUl.removeChild(usersUl.firstChild);
+            }
+
+            for (var i = 0; i < users.length; i++) {
+                addUserToUsersList(usersUl, users[i]);
+            }
+        };
+        xhr.send();
+    };
+
+    var addUserToUsersList = function (usersUl, user) {
+        var li = document.createElement("li");
+        li.textContent = user.name;
+        li.style.color = user.strokeStyle;
+
+        usersUl.appendChild(li);
+    };
+
     window.addEventListener('load', function () {
+
+        var container = document.getElementById("container");
+        var usersList = document.getElementById("users");
 
         // Join the room
         var socket = io.connect(location.origin);
@@ -103,10 +138,22 @@
             return;
         }
 
-        var container = document.getElementById("container");
+        var name = null;
+        while (!name) {
+            name = prompt("What's your name? (required)");
+        }
+
         var randomStokeStyle = getNextStrokeStyle();
 
+        var currentUser = {
+            'name': name,
+            'strokeStyle': randomStokeStyle,
+        };
+
+        addUserToUsersList(usersList, currentUser, true);
+
         var engine = new DrawingEngine(container, randomStokeStyle);
+        // When you draw on the screen, inform friends
         engine.afterLineDraw = function (previousPoint, currentPoint, strokeStyle) {
             socket.emit('I drew!', {
                 previousPoint: previousPoint,
@@ -115,12 +162,20 @@
             });
         };
 
-
+        // When friend draws on their screen, inform me (this browser)
         socket.on('A friend drew!', function (data) {
             engine.drawLine(data.previousPoint, data.currentPoint, data.strokeStyle);
         });
 
-        console.log('loaded');
+        socket.on('A friend joined!', function (user) {
+            updateUsersList(usersList)
+        });
+
+        socket.on('A friend left :(', function (user) {
+            updateUsersList(usersList);
+        });
+
+        socket.emit('I joined!', currentUser);
     });
 
 })();
