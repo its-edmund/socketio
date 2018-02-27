@@ -3,31 +3,24 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-// Store canvas on server to download canvas when a client connects
-var clickX = [], clickY = [], clickDrag = [];
+io.sockets.on('connection', function (socket) {
 
-io.sockets.on('connection', function(socket) {
-  socket.emit('initCanvas', {
-  	clickX: clickX,
-  	clickY: clickY,
-  	clickDrag, clickDrag
-  });
+    socket.on('I drew!', function (data) {
+        var previousPoint = data.previousPoint;
+        var currentPoint = data.currentPoint;
+        var strokeStyle = data.strokeStyle;
 
-  socket.on('addClick', function(data) {
-  	clickX.push(data.x);
-  	clickY.push(data.y);
-  	clickDrag.push(data.dragging);
-
-    socket.broadcast.emit('draw', {
-      x: data.x,
-      y: data.y,
-      dragging: data.dragging
+        socket.broadcast.emit('A friend drew!', {
+            previousPoint: previousPoint,
+            currentPoint: currentPoint,
+            strokeStyle: strokeStyle,
+        });
     });
-  });
+
 });
 
 app.use(express.static('public/'));
 
-http.listen(3000, function() {
-  console.log('listening on 3000');
+http.listen(3000, function () {
+    console.log('listening on 3000');
 });
